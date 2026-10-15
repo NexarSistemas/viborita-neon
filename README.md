@@ -35,7 +35,7 @@ El ranking, las estadísticas de logros y los récords se guardan en `localStora
 
 ## Estado del lanzamiento
 
-**v1.0.1 RC — candidata a estable.** La instalación en Android y el funcionamiento offline ya se comprobaron manualmente. Antes de publicar el tag `v1.0.0`, queda pendiente completar la matriz de pruebas en [TESTING.md](TESTING.md) y resolver únicamente fallos reproducibles.
+**v1.0.1 RC — candidata a estable.** La instalación en Android y el funcionamiento offline ya se comprobaron manualmente. Antes de publicar el tag `v1.0.1`, queda pendiente completar la matriz de pruebas en [TESTING.md](TESTING.md) y resolver únicamente fallos reproducibles.
 
 ### Pruebas locales
 
