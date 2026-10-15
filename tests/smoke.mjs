@@ -30,7 +30,7 @@ test('el HTML mantiene las pantallas principales y JavaScript sintácticamente v
   for (const id of ['game', 'startOverlay', 'pauseOverlay', 'endOverlay', 'statsModal', 'startBtn']) {
     assert.match(html, new RegExp(`id=["']${id}["']`), `Falta ${id}`);
   }
-  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+  const scripts = [...html.matchAll(/<script[^>]*>([^]*?)<\/script>/gi)];
   assert.ok(scripts.length >= 1);
   for (const [, source] of scripts) new Script(source);
 });
