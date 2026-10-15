@@ -14,9 +14,10 @@ function loadGame() {
   assert.ok(source, 'No se encontró el motor del juego');
 
   const elements = new Map();
+  const hiddenControls = Array.from({length:7},()=>({inert:false}));
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, {
-      classList: { add() {}, remove() {}, contains() { return false; } },
+      classList: (() => { const classes = new Set(id === 'statsModal' ? ['hidden'] : []); return { add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains(name) { return classes.has(name); } }; })(),
       style: {}, textContent: '', value: id === 'mode' ? 'campaign' : id === 'difficulty' ? 'normal' : '',
       focus() {}, blur() {}, addEventListener() {}, appendChild() {},
     });
@@ -28,7 +29,7 @@ function loadGame() {
     HTMLElement: class {}, confirm: () => true, addEventListener() {}, requestAnimationFrame() {},
     window: { addEventListener() {} },
     document: {
-      activeElement: null, documentElement: { style: { setProperty() {} } },
+      activeElement: null, body: { classList: { toggle() {} } }, documentElement: { style: { setProperty() {} } },
       getElementById(id) {
         const node = element(id);
         if (id === 'game') {
@@ -39,15 +40,17 @@ function loadGame() {
         }
         return node;
       },
-      querySelectorAll: () => [], addEventListener() {}, createElement: () => element(`created-${elements.size}`),
+      querySelectorAll: (selector) => selector.includes('header, .hud') ? hiddenControls : [], addEventListener() {}, createElement: () => element(`created-${elements.size}`),
     },
   };
   createContext(context);
   const instrumented = source.replace(/\}\)\(\);\s*$/, `globalThis.__gameTest = {
-    init, start, tick, direction, pause, loop, reachable, makeObstacles, placeFood,
+    init, start, tick, direction, pause, loop, reachable, makeObstacles, placeFood, openStats, closeStats, syncWelcome,
     get game() { return game; }, get status() { return status; }
   };})();`);
   new Script(instrumented).runInContext(context);
+  context.__gameTest.hiddenControls=hiddenControls;
+  context.__gameTest.getElement=element;
   return context.__gameTest;
 }
 
@@ -171,4 +174,27 @@ test('la pausa congela el temporizador del bonus y los efectos activos', () => {
   assert.equal(state.item.left, 7000);
   assert.equal(state.effects.slow, 6500);
   assert.equal(state.effects.double, 6500);
+});
+
+
+test('la bienvenida inhabilita controles ocultos y los restaura al jugar', () => {
+  const game = loadGame();
+  assert.ok(game.hiddenControls.every(node => node.inert));
+  game.start();
+  assert.ok(game.hiddenControls.every(node => !node.inert));
+});
+
+test('el ranking conserva el botón que lo abrió para devolver el foco', () => {
+  const game = loadGame();
+  let focused = 0;
+  const button = {focus() { focused++; }, inert: false};
+  game.openStats(button);
+  game.closeStats();
+  assert.equal(focused, 1);
+});
+
+test('el diálogo de ranking se muestra encima de la portada', () => {
+  const html = read('index.html');
+  assert.ok(html.includes('.modal{z-index:30}'));
+  assert.ok(html.includes('.landing{position:fixed;inset:0;z-index:20;'));
 });
