@@ -35,7 +35,7 @@ El ranking, las estadísticas de logros y los récords se guardan en `localStora
 
 ## Estado del lanzamiento
 
-**v1.0.1 RC — candidata a estable.** La instalación en Android y el funcionamiento offline ya se comprobaron manualmente. Antes de publicar el tag `v1.0.1`, queda pendiente completar la matriz de pruebas en [TESTING.md](TESTING.md) y resolver únicamente fallos reproducibles.
+**v1.1.0 — bienvenida Nexar.** Incorpora una pantalla inicial con acceso al ranking, enlace institucional y versión visible. La jugabilidad y el almacenamiento local permanecen sin cambios. Antes de publicar una release estable, ejecutar las pruebas de [TESTING.md](TESTING.md).
 
 ### Pruebas locales
 
@@ -49,3 +49,7 @@ Las pruebas automáticas cubren estructura y recursos estáticos; no sustituyen 
 ## Licencia
 
 MIT © 2026 Nexar Sistemas. Ver [LICENSE](LICENSE).
+
+## Pantalla de bienvenida v1.1.0
+
+La nueva portada incluye selección de modo y dificultad, nombre para el ranking, acceso directo al salón de la fama y vínculo a [Nexar Sistemas](https://nexarsistemas.com.ar/). El desenfoque del fondo afecta únicamente al tablero. El Service Worker renueva su caché de recursos para distribuir esta actualización a la PWA instalada.
