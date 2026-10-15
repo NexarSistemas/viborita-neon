@@ -1,43 +1,51 @@
-# Viborita Neón — Arcade Edition v1.0.0 (candidata)
+# 🐍 Viborita Neón — Arcade Edition
 
-Juego HTML/CSS/JavaScript sin dependencias ni backend.
+Juego arcade con estética neón, desarrollado en **HTML, CSS y JavaScript puro**, sin frameworks, cuentas ni backend.
 
-## Probar en la computadora
+🎮 **Jugar:** https://nexarsistemas.com.ar/viborita-neon/
 
-Abrí `index.html` directamente para jugar. Para **probar la PWA y el modo offline**, iniciá un servidor local dentro de esta carpeta:
+## Características
+
+- Campaña de tres niveles, modo infinito y desafío diario.
+- Dificultades tranquilo, normal y experto.
+- Bonus, escudo, cámara lenta y multiplicador de puntos.
+- Ranking de diez partidas y seis logros, guardados **solo en este dispositivo**.
+- Teclado (flechas o WASD), controles táctiles y gestos.
+- Instalación como PWA y juego sin conexión tras guardar sus recursos.
+
+> El desafío diario utiliza una fecha de Argentina para generar su escenario. No hay ranking global, sincronización ni verificación remota de resultados.
+
+## Jugar localmente
+
+Para una partida rápida podés abrir `index.html`. Para probar instalación y modo offline, serví la carpeta por HTTP local:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Visitá http://localhost:8000 desde la computadora. La instalación y el service worker requieren `localhost` o un sitio servido por HTTPS (por ejemplo, GitHub Pages); no funcionan desde `file://`.
+Abrí http://localhost:8000. La PWA requiere **HTTPS o localhost**; no se puede probar el Service Worker mediante `file://`.
 
-## Repositorio y licencia
+## Instalación
 
-Repositorio previsto: https://github.com/NexarSistemas/viborita-neon
+Desde la URL pública en un navegador compatible, abrí el menú del navegador y elegí **Instalar aplicación** (la opción concreta depende del dispositivo). Una vez cargados los recursos, la PWA puede seguir ejecutándose sin conexión.
 
-Licencia MIT, consultar `LICENSE`.
+## Datos y privacidad
 
-## Publicar en GitHub Pages
+El ranking, las estadísticas de logros y los récords se guardan en `localStorage` del navegador. No se envían a ningún servidor. Si se borran los datos del sitio, esos registros se pierden.
 
-1. Crear un repositorio público y subir **el contenido** de esta carpeta a la rama principal.
-2. Ir a Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`.
-3. Abrir la URL HTTPS de Pages. La aplicación podrá instalarse desde el navegador compatible.
+## Estado del lanzamiento
 
-## Datos
+**v1.0.1 RC — candidata a estable.** La instalación en Android y el funcionamiento offline ya se comprobaron manualmente. Antes de publicar el tag `v1.0.1`, queda pendiente completar la matriz de pruebas en [TESTING.md](TESTING.md) y resolver únicamente fallos reproducibles.
 
-El ranking y los logros se guardan en el almacenamiento local del navegador. No se suben a un servidor. Borrar datos del sitio los elimina. El desafío diario usa la fecha de Argentina; el resultado se guarda solo localmente, por lo que no constituye una competencia global verificada.
+### Pruebas locales
 
-## Validaciones antes de etiquetar v1.0.0 estable
+```bash
+node --check tests/smoke.mjs
+node --test tests/smoke.mjs
+```
 
-- Campaña: completar niveles 1, 2 y 3; muerte por obstáculos, cuerpo y límites.
-- Modos infinito y diario, las tres dificultades y puntuación.
-- Poderes, su expiración y pausa; controles táctiles y teclado.
-- Ranking, logros y persistencia tras cerrar/reabrir.
-- Probar instalación y funcionamiento offline en Android y en escritorio, desde HTTPS.
+Las pruebas automáticas cubren estructura y recursos estáticos; no sustituyen las pruebas de jugabilidad en navegador.
 
-**Estado:** candidata para pruebas. El repositorio y GitHub Pages deben crearse y habilitarse antes de afirmar que está publicada.
+## Licencia
 
-## Ajuste de controles (RC 1.0.1)
-
-Al iniciar se enfoca el tablero y se libera el foco del selector o campo del jugador. Durante una partida, las flechas y WASD se procesan aunque hubiera quedado enfocado un campo de texto. Se mantiene la cola de direcciones y la protección contra giros de 180°.
+MIT © 2026 Nexar Sistemas. Ver [LICENSE](LICENSE).

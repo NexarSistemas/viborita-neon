@@ -1,0 +1,174 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Script, createContext } from 'node:vm';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (name) => readFileSync(resolve(root, name), 'utf8');
+
+function loadGame() {
+  const html = read('index.html');
+  const [, source] = html.match(/<script>\n([\s\S]*?)\n<\/script>/) || [];
+  assert.ok(source, 'No se encontró el motor del juego');
+
+  const elements = new Map();
+  const element = (id) => {
+    if (!elements.has(id)) elements.set(id, {
+      classList: { add() {}, remove() {}, contains() { return false; } },
+      style: {}, textContent: '', value: id === 'mode' ? 'campaign' : id === 'difficulty' ? 'normal' : '',
+      focus() {}, blur() {}, addEventListener() {}, appendChild() {},
+    });
+    return elements.get(id);
+  };
+  const context = {
+    console, Date, Intl, Math, JSON, Set, Map, performance: { now: () => 0 },
+    localStorage: { getItem: () => null, setItem() {} },
+    HTMLElement: class {}, confirm: () => true, addEventListener() {}, requestAnimationFrame() {},
+    window: { addEventListener() {} },
+    document: {
+      activeElement: null, documentElement: { style: { setProperty() {} } },
+      getElementById(id) {
+        const node = element(id);
+        if (id === 'game') {
+          node.getContext ||= () => ({
+            clearRect() {}, createLinearGradient: () => ({ addColorStop() {} }), fillRect() {}, beginPath() {},
+            moveTo() {}, lineTo() {}, stroke() {}, arc() {}, fill() {}, fillText() {}, rect() {},
+          });
+        }
+        return node;
+      },
+      querySelectorAll: () => [], addEventListener() {}, createElement: () => element(`created-${elements.size}`),
+    },
+  };
+  createContext(context);
+  const instrumented = source.replace(/\}\)\(\);\s*$/, `globalThis.__gameTest = {
+    init, start, tick, direction, pause, loop, reachable, makeObstacles, placeFood,
+    get game() { return game; }, get status() { return status; }
+  };})();`);
+  new Script(instrumented).runInContext(context);
+  return context.__gameTest;
+}
+
+test('los recursos mínimos de la PWA existen', () => {
+  for (const file of ['index.html', 'manifest.webmanifest', 'service-worker.js', 'icons/icon-192.png', 'icons/icon-512.png']) {
+    assert.ok(existsSync(resolve(root, file)), `Falta ${file}`);
+  }
+});
+
+test('el manifiesto está bien formado y apunta a recursos existentes', () => {
+  const manifest = JSON.parse(read('manifest.webmanifest'));
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.start_url, './');
+  assert.equal(manifest.scope, './');
+  assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 2);
+  for (const icon of manifest.icons) {
+    assert.ok(existsSync(resolve(root, icon.src)), `Ícono inexistente: ${icon.src}`);
+  }
+});
+
+test('el HTML mantiene las pantallas principales y JavaScript sintácticamente válido', () => {
+  const html = read('index.html');
+  for (const id of ['game', 'startOverlay', 'pauseOverlay', 'endOverlay', 'statsModal', 'startBtn']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`), `Falta ${id}`);
+  }
+  const scripts = [...html.matchAll(/<script[^>]*>([^]*?)<\/script>/gi)];
+  assert.ok(scripts.length >= 1);
+  for (const [, source] of scripts) new Script(source);
+});
+
+test('el service worker compila y cachea los recursos esperados', () => {
+  const worker = read('service-worker.js');
+  new Script(worker);
+  for (const asset of ['./index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']) {
+    assert.ok(worker.includes(asset), `No se precachea ${asset}`);
+  }
+});
+
+test('la cola de giros evita el reverso y conserva giros válidos', () => {
+  const game = loadGame();
+  game.start();
+
+  game.direction('L');
+  game.direction('U');
+  game.direction('L');
+
+  assert.equal(game.game.queue.length, 2);
+  assert.equal(game.game.queue[0].y, -1);
+  assert.equal(game.game.queue[1].x, -1);
+});
+
+test('el escudo absorbe una colisión sin mover la serpiente y admite un giro seguro', () => {
+  const game = loadGame();
+  game.start();
+  const state = game.game;
+  const head = { ...state.snake[0] };
+  state.effects.shield = 1;
+  state.obstacles = [{ x: head.x + 1, y: head.y }];
+
+  game.tick();
+
+  assert.equal(game.status, 'playing');
+  assert.deepEqual({ ...state.snake[0] }, head);
+  assert.equal(state.effects.shield, 0);
+  assert.equal(state.freeze, 450);
+
+  game.direction('U');
+  state.freeze = 0;
+  game.tick();
+  assert.deepEqual({ ...state.snake[0] }, { x: head.x, y: head.y - 1 });
+});
+
+test('la transición de nivel conserva comida alcanzable y genera los obstáculos previstos', () => {
+  const game = loadGame();
+  game.start();
+  const state = game.game;
+  const head = state.snake[0];
+  state.eaten = 7;
+  state.food = { x: head.x + 1, y: head.y };
+
+  game.tick();
+
+  assert.equal(state.level, 2);
+  assert.equal(state.obstacles.length, 10);
+  assert.ok(state.food);
+  assert.ok(game.reachable().has(`${state.food.x},${state.food.y}`));
+});
+
+test('los niveles con obstáculos reservan una celda libre y alcanzable para la comida', () => {
+  const game = loadGame();
+  game.start();
+  const state = game.game;
+
+  for (const [level, obstacleCount] of [[2, 10], [3, 20]]) {
+    state.level = level;
+    state.seeded = true;
+    state.seed = level;
+    state.food = null;
+    state.item = null;
+    game.makeObstacles();
+    game.placeFood();
+
+    assert.equal(state.obstacles.length, obstacleCount);
+    assert.ok(state.food);
+    assert.ok(game.reachable().has(`${state.food.x},${state.food.y}`));
+  }
+});
+
+test('la pausa congela el temporizador del bonus y los efectos activos', () => {
+  const game = loadGame();
+  game.start();
+  const state = game.game;
+  state.item = { x: 0, y: 0, type: 'star', left: 7000 };
+  state.effects.slow = 6500;
+  state.effects.double = 6500;
+
+  game.pause();
+  game.loop(5000);
+
+  assert.equal(game.status, 'paused');
+  assert.equal(state.item.left, 7000);
+  assert.equal(state.effects.slow, 6500);
+  assert.equal(state.effects.double, 6500);
+});
