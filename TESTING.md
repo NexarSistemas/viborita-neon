@@ -1,4 +1,4 @@
-# Verificación para publicar v1.0.0
+# Verificación para publicar v1.0.1
 
 Marcar un caso como aprobado solo si se probó. No borrar almacenamiento local durante la prueba de persistencia. Registrar dispositivo, navegador y fecha.
 
@@ -41,4 +41,4 @@ Marcar un caso como aprobado solo si se probó. No borrar almacenamiento local d
 
 ## Criterio para el release
 
-Publicar `v1.0.0` únicamente tras superar las pruebas bloqueantes y comprobar que la web sirve la misma versión que `main`. El tag debe apuntar a un commit validado y el release describir características, instalación y privacidad.
+Publicar `v1.0.1` únicamente tras superar las pruebas bloqueantes y comprobar que la web sirve la misma versión que `main`. El tag debe apuntar a un commit validado y el release describir características, instalación y privacidad.
