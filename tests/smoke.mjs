@@ -17,7 +17,7 @@ function loadGame() {
   const hiddenControls = Array.from({length:7},()=>({inert:false}));
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, {
-      classList: { add() {}, remove() {}, contains() { return false; } },
+      classList: (() => { const classes = new Set(id === 'statsModal' ? ['hidden'] : []); return { add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains(name) { return classes.has(name); } }; })(),
       style: {}, textContent: '', value: id === 'mode' ? 'campaign' : id === 'difficulty' ? 'normal' : '',
       focus() {}, blur() {}, addEventListener() {}, appendChild() {},
     });
@@ -46,7 +46,6 @@ function loadGame() {
   createContext(context);
   const instrumented = source.replace(/\}\)\(\);\s*$/, `globalThis.__gameTest = {
     init, start, tick, direction, pause, loop, reachable, makeObstacles, placeFood, openStats, closeStats, syncWelcome,
-    hiddenControls, getElement: element,
     get game() { return game; }, get status() { return status; }
   };})();`);
   new Script(instrumented).runInContext(context);
