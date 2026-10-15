@@ -195,6 +195,6 @@ test('el ranking conserva el botón que lo abrió para devolver el foco', () => 
 
 test('el diálogo de ranking se muestra encima de la portada', () => {
   const html = read('index.html');
-  assert.match(html, /\\.modal\\{z-index:30\\}/);
-  assert.match(html, /\\.landing\\{position:fixed;inset:0;z-index:20/);
+  assert.ok(html.includes('.modal{z-index:30}'));
+  assert.ok(html.includes('.landing{position:fixed;inset:0;z-index:20'));
 });
