@@ -86,9 +86,14 @@ test('el HTML mantiene las pantallas principales y JavaScript sintácticamente v
 test('el service worker compila y cachea los recursos esperados', () => {
   const worker = read('service-worker.js');
   new Script(worker);
+  assert.ok(worker.includes("const CACHE='viborita-neon-v1.4.0'"));
   for (const asset of ['./index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']) {
     assert.ok(worker.includes(asset), `No se precachea ${asset}`);
   }
+});
+
+test('la versión visible coincide con la caché PWA de la release', () => {
+  assert.ok(read('index.html').includes('<strong>v1.4.0</strong>'));
 });
 
 test('la cola de giros evita el reverso y conserva giros válidos', () => {
