@@ -19,7 +19,7 @@ function loadGame() {
     if (!elements.has(id)) elements.set(id, {
       classList: (() => { const classes = new Set(id === 'statsModal' ? ['hidden'] : []); return { add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains(name) { return classes.has(name); } }; })(),
       style: {}, textContent: '', value: id === 'mode' ? 'campaign' : id === 'difficulty' ? 'normal' : '',
-      focus() {}, blur() {}, addEventListener() {}, appendChild() {},
+      focus() {}, blur() {}, listeners: {}, addEventListener(type,fn) { (this.listeners[type] ||= []).push(fn); }, dispatch(type,event) { for(const fn of this.listeners[type]||[])fn(event); }, setPointerCapture() {}, hasPointerCapture(){return false}, releasePointerCapture() {}, getBoundingClientRect(){return {width:400,height:400}}, appendChild() {},
     });
     return elements.get(id);
   };
@@ -197,4 +197,39 @@ test('el diálogo de ranking se muestra encima de la portada', () => {
   const html = read('index.html');
   assert.ok(html.includes('.modal{z-index:30}'));
   assert.ok(html.includes('.landing{position:fixed;inset:0;z-index:20;'));
+});
+
+
+test('los gestos continuos permiten encadenar giros sin levantar el dedo', () => {
+  const game=loadGame();game.start();
+  const canvas=game.getElement('game');
+  canvas.dispatch('pointerdown',{pointerId:4,pointerType:'touch',clientX:100,clientY:100});
+  canvas.dispatch('pointermove',{pointerId:4,pointerType:'touch',clientX:100,clientY:60});
+  canvas.dispatch('pointermove',{pointerId:4,pointerType:'touch',clientX:55,clientY:60});
+  assert.equal(game.game.queue.length,2);
+  assert.equal(game.game.queue[0].y,-1);
+  assert.equal(game.game.queue[1].x,-1);
+  canvas.dispatch('pointerup',{pointerId:4,pointerType:'touch',clientX:55,clientY:60});
+});
+
+test('el control continuo ignora punteros ajenos y cancela correctamente', () => {
+  const game=loadGame();game.start();
+  const canvas=game.getElement('game');
+  canvas.dispatch('pointerdown',{pointerId:1,pointerType:'touch',clientX:100,clientY:100});
+  canvas.dispatch('pointermove',{pointerId:2,pointerType:'touch',clientX:100,clientY:40});
+  assert.equal(game.game.queue.length,0);
+  canvas.dispatch('pointercancel',{pointerId:1});
+  canvas.dispatch('pointermove',{pointerId:1,pointerType:'touch',clientX:100,clientY:40});
+  assert.equal(game.game.queue.length,0);
+});
+
+test('las flechas permanecen disponibles como alternativa al control por gestos', () => {
+  const game=loadGame();game.start();
+  game.getElement('touchMode').value='buttons';
+  const canvas=game.getElement('game');
+  canvas.dispatch('pointerdown',{pointerId:1,pointerType:'touch',clientX:100,clientY:100});
+  canvas.dispatch('pointermove',{pointerId:1,pointerType:'touch',clientX:100,clientY:50});
+  assert.equal(game.game.queue.length,0);
+  game.direction('U');
+  assert.equal(game.game.queue.length,1);
 });
