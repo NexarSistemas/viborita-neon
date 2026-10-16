@@ -263,7 +263,7 @@ test('el cambio al nivel 2 espera confirmación sin avanzar contra la pared', ()
   assert.equal(sim.status,'paused');
   assert.equal(g.snake[0].x,19);
   assert.notEqual(g.dir.x,1,'la dirección hacia la pared debe cambiar');
-  sim.tick();
+  sim.loop(5000);
   assert.equal(g.snake[0].x,19,'no debe avanzar antes de continuar');
   sim.pause();
   assert.equal(sim.status,'playing');
