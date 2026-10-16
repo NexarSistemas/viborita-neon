@@ -62,7 +62,7 @@ const LEVELS=[{name:'PRADERA',wrap:true,obstacles:0,base:150,goal:8,hue:165},{na
 const STORE='viborita_arcade_v1',ACH=[['first','🍎 Primer bocado','Comé una fruta'],['circuit','⚡ Circuito','Llegá al nivel 2'],['inferno','🔥 Infierno','Llegá al nivel 3'],['win','👑 Maestro Neón','Completá la campaña'],['bonus','⭐ Cazador de estrellas','Recogé 10 estrellas en total'],['hundred','💎 Cien puntos','Conseguí 1000 puntos en una partida']];
 function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'{}');return {ranking:Array.isArray(d.ranking)?d.ranking.slice(0,10):[],ach:d.ach&&typeof d.ach==='object'?d.ach:{},stars:Number(d.stars)||0}}catch{return {ranking:[],ach:{},stars:0}}}
 let db=load(),game=null,status='menu',last=0,acc=0,audioCtx=null,muted=false,pausedAt=0,modalWasPlaying=false,statsTrigger=null;
-function syncWelcome(){const isMenu=status==='menu';document.body.classList.toggle('welcome-screen',isMenu);document.querySelectorAll('header, .hud, .progress, #powers, .controls, .pad, .hint').forEach(node=>{node.inert=isMenu})}
+function syncWelcome(){const isMenu=status==='menu';document.body.classList.toggle('welcome-screen',isMenu);document.querySelectorAll('header, .hud, .progress, #powers, .controls, .pad, .hint, .touch-setting').forEach(node=>{node.inert=isMenu})}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(db))}catch{}}
 function rand(){if(!game||!game.seeded)return Math.random();game.seed=(Math.imul(game.seed,1664525)+1013904223)>>>0;return game.seed/4294967296}
 function dailySeed(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());return {seed:Number(p.replace(/\D/g,''))>>>0,label:p}}
