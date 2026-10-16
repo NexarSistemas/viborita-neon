@@ -233,3 +233,21 @@ test('las flechas permanecen disponibles como alternativa al control por gestos'
   game.direction('U');
   assert.equal(game.game.queue.length,1);
 });
+
+
+test('el arrastre largo en la misma dirección no bloquea un giro posterior', () => {
+  const game=loadGame();game.start();
+  const canvas=game.getElement('game');
+  canvas.dispatch('pointerdown',{pointerId:8,pointerType:'touch',clientX:100,clientY:200});
+  canvas.dispatch('pointermove',{pointerId:8,pointerType:'touch',clientX:100,clientY:150});
+  canvas.dispatch('pointermove',{pointerId:8,pointerType:'touch',clientX:100,clientY:90});
+  canvas.dispatch('pointermove',{pointerId:8,pointerType:'touch',clientX:70,clientY:90});
+  assert.equal(game.game.queue.length,2);
+  assert.equal(game.game.queue[0].y,-1);
+  assert.equal(game.game.queue[1].x,-1);
+});
+
+test('la portada incluye el selector táctil en los controles inertes', () => {
+  const html=read('index.html');
+  assert.ok(html.includes('.pad, .hint, .touch-setting'));
+});
