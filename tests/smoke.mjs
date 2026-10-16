@@ -219,6 +219,31 @@ test('el manual se abre desde la bienvenida, navega y devuelve el foco', () => {
   assert.equal(focused, 1);
 });
 
+test('la navegación del manual oculta solo el control que no aplica en cada paso', () => {
+  const game = loadGame();
+  const previous = game.getElement('previousManual');
+  const next = game.getElement('nextManual');
+  const close = game.getElement('closeManual');
+  game.openManual();
+
+  assert.equal(previous.classList.contains('manual-nav-hidden'), true);
+  assert.equal(next.classList.contains('manual-nav-hidden'), false);
+  assert.equal(close.classList.contains('manual-nav-hidden'), false);
+
+  next.onclick();
+  assert.equal(previous.classList.contains('manual-nav-hidden'), false);
+  assert.equal(next.classList.contains('manual-nav-hidden'), false);
+
+  next.onclick();
+  assert.equal(previous.classList.contains('manual-nav-hidden'), false);
+  assert.equal(next.classList.contains('manual-nav-hidden'), false);
+
+  next.onclick();
+  assert.equal(previous.classList.contains('manual-nav-hidden'), false);
+  assert.equal(next.classList.contains('manual-nav-hidden'), true);
+  assert.equal(close.classList.contains('manual-nav-hidden'), false);
+});
+
 test('el manual atrapa Tab y Shift+Tab, bloquea el fondo y cierra con Escape', () => {
   const game = loadGame();
   let focused = 0;
