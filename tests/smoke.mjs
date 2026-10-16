@@ -251,3 +251,62 @@ test('la portada incluye el selector táctil en los controles inertes', () => {
   const html=read('index.html');
   assert.ok(html.includes('.pad, .hint, .touch-setting'));
 });
+
+
+test('el cambio al nivel 2 espera confirmación sin avanzar contra la pared', () => {
+  const sim=loadGame();sim.start();
+  const g=sim.game;
+  g.snake=[{x:18,y:12},{x:17,y:12},{x:16,y:12}];
+  g.dir={x:1,y:0};g.queue=[];g.eaten=7;g.food={x:19,y:12};
+  sim.tick();
+  assert.equal(g.level,2);
+  assert.equal(sim.status,'paused');
+  assert.equal(g.snake[0].x,19);
+  assert.notEqual(g.dir.x,1,'la dirección hacia la pared debe cambiar');
+  sim.loop(5000);
+  assert.equal(g.snake[0].x,19,'no debe avanzar antes de continuar');
+  sim.pause();
+  assert.equal(sim.status,'playing');
+  sim.tick();
+  assert.equal(sim.status,'playing');
+  assert.equal(g.snake[0].x,19);
+});
+
+
+test('la transición limpia giros pendientes aunque el rumbo actual sea seguro', () => {
+  const sim=loadGame();sim.start();const g=sim.game;
+  g.eaten=7;g.snake=[{x:18,y:12},{x:17,y:12},{x:16,y:12}];g.dir={x:1,y:0};
+  g.queue=[{x:0,y:-1},{x:1,y:0}];g.food={x:18,y:11};
+  sim.tick();
+  assert.equal(sim.status,'paused');
+  assert.equal(g.queue.length,0);
+  assert.ok(g.food);
+  assert.notDeepEqual({...g.food},{...g.snake[0]},'la fruta consumida debe reemplazarse');
+});
+
+test('se puede elegir una salida segura antes de continuar', () => {
+  const sim=loadGame();sim.start();const g=sim.game;
+  g.eaten=7;g.snake=[{x:18,y:12},{x:17,y:12},{x:16,y:12}];g.dir={x:1,y:0};
+  g.food={x:19,y:12};sim.tick();
+  assert.equal(sim.status,'paused');
+  sim.direction('D');
+  assert.equal(g.dir.y,1);
+  sim.direction('R');
+  assert.equal(g.dir.y,1,'no se debe permitir un paso contra la pared');
+  sim.pause();sim.tick();
+  assert.equal(sim.status,'playing');
+  assert.equal(g.snake[0].y,13);
+});
+
+
+test('los controles de rumbo permanecen ocultos fuera de la transición', () => {
+  const html=read('index.html');
+  assert.ok(html.includes('#levelDirections.hidden{display:none}'));
+});
+
+test('solo la zona de gestos impide el paneo; el aviso conserva scroll', () => {
+  const html=read('index.html');
+  assert.ok(html.includes('#levelGesture{touch-action:none;'));
+  assert.ok(!html.includes('#pauseOverlay:has(#levelDirections:not(.hidden)){touch-action:none}'));
+  assert.ok(html.includes("el('levelGesture').addEventListener('pointerdown'"));
+});
