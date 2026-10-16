@@ -297,3 +297,14 @@ test('se puede elegir una salida segura antes de continuar', () => {
   assert.equal(sim.status,'playing');
   assert.equal(g.snake[0].y,13);
 });
+
+
+test('los controles de rumbo permanecen ocultos fuera de la transición', () => {
+  const html=read('index.html');
+  assert.ok(html.includes('#levelDirections.hidden{display:none}'));
+});
+
+test('la superficie de transición impide paneo nativo que cancela el gesto', () => {
+  const html=read('index.html');
+  assert.ok(html.includes('#pauseOverlay:has(#levelDirections:not(.hidden)){touch-action:none}'));
+});
