@@ -304,7 +304,9 @@ test('los controles de rumbo permanecen ocultos fuera de la transición', () => 
   assert.ok(html.includes('#levelDirections.hidden{display:none}'));
 });
 
-test('la superficie de transición impide paneo nativo que cancela el gesto', () => {
+test('solo la zona de gestos impide el paneo; el aviso conserva scroll', () => {
   const html=read('index.html');
-  assert.ok(html.includes('#pauseOverlay:has(#levelDirections:not(.hidden)){touch-action:none}'));
+  assert.ok(html.includes('#levelGesture{touch-action:none;'));
+  assert.ok(!html.includes('#pauseOverlay:has(#levelDirections:not(.hidden)){touch-action:none}'));
+  assert.ok(html.includes("el('levelGesture').addEventListener('pointerdown'"));
 });
