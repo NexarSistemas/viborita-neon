@@ -120,8 +120,8 @@ el('statsBtn').onclick=()=>openStats(el('statsBtn'));el('startStatsBtn').onclick
 const keys={ArrowUp:'U',ArrowDown:'D',ArrowLeft:'L',ArrowRight:'R',w:'U',a:'L',s:'D',d:'R'};addEventListener('keydown',e=>{if(!el('statsModal').classList.contains('hidden')){if(e.key==='Escape')closeStats();return}if(status!=='playing'&&['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;const k=keys[e.key]||keys[e.key.toLowerCase()];if(k){e.preventDefault();direction(k)}else if(e.code==='Space'||e.key.toLowerCase()==='p'){e.preventDefault();if(status==='menu'||status==='over')start();else pause()}else if(e.key.toLowerCase()==='m')el('muteBtn').click();else if(e.key==='Enter'&&(status==='menu'||status==='over'))start()});
 document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();direction(b.dataset.dir)}));let touch=null;
 const touchMode=el('touchMode');
-touchMode.value=localStorage.getItem('viborita-touch-mode')==='buttons'?'buttons':'gestures';
-touchMode.addEventListener('change',()=>{localStorage.setItem('viborita-touch-mode',touchMode.value);cancelTouch()});
+try{touchMode.value=localStorage.getItem('viborita-touch-mode')==='buttons'?'buttons':'gestures'}catch{touchMode.value='gestures'}
+touchMode.addEventListener('change',()=>{try{localStorage.setItem('viborita-touch-mode',touchMode.value)}catch{}cancelTouch()});
 function cancelTouch(){if(touch&&canvas.hasPointerCapture?.(touch.id))canvas.releasePointerCapture(touch.id);touch=null}
 function touchMove(e){
   if(!touch||e.pointerId!==touch.id||status!=='playing'||touchMode.value!=='gestures')return;
@@ -134,7 +134,7 @@ function touchMove(e){
   direction(key);
   const after=game.queue.length?game.queue[game.queue.length-1]:game.dir;
   // Solo consumir el gesto al aceptar un giro; un giro ilegal no bloquea el siguiente.
-  if(after!==previous){touch.x=e.clientX;touch.y=e.clientY}
+  if(after!==previous||(after.x===D[key].x&&after.y===D[key].y)){touch.x=e.clientX;touch.y=e.clientY}
 }
 canvas.addEventListener('pointerdown',e=>{
   if(status!=='playing'||touchMode.value!=='gestures'||touch||e.pointerType==='mouse'&&e.button!==0)return;
