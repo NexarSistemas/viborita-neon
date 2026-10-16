@@ -14,20 +14,21 @@ function loadGame() {
   assert.ok(source, 'No se encontró el motor del juego');
 
   const elements = new Map();
+  const globalListeners = {};
   const hiddenControls = Array.from({length:7},()=>({inert:false}));
   const element = (id) => {
     if (!elements.has(id)) elements.set(id, {
-      classList: (() => { const classes = new Set(id === 'statsModal' ? ['hidden'] : []); return { add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains(name) { return classes.has(name); } }; })(),
+      classList: (() => { const classes = new Set(['statsModal', 'manualModal'].includes(id) ? ['hidden'] : []); return { add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains(name) { return classes.has(name); } }; })(),
       style: {}, textContent: '', value: id === 'mode' ? 'campaign' : id === 'difficulty' ? 'normal' : '',
-      focus() {}, blur() {}, listeners: {}, addEventListener(type,fn) { (this.listeners[type] ||= []).push(fn); }, dispatch(type,event) { for(const fn of this.listeners[type]||[])fn(event); }, setPointerCapture() {}, hasPointerCapture(){return false}, releasePointerCapture() {}, getBoundingClientRect(){return {width:400,height:400}}, appendChild() {},
+      focus() { context.document.activeElement = this; }, blur() {}, listeners: {}, addEventListener(type,fn) { (this.listeners[type] ||= []).push(fn); }, dispatch(type,event) { for(const fn of this.listeners[type]||[])fn(event); }, setPointerCapture() {}, hasPointerCapture(){return false}, releasePointerCapture() {}, getBoundingClientRect(){return {width:400,height:400}}, appendChild() {},
     });
     return elements.get(id);
   };
   const context = {
     console, Date, Intl, Math, JSON, Set, Map, performance: { now: () => 0 },
     localStorage: { getItem: () => null, setItem() {} },
-    HTMLElement: class {}, confirm: () => true, addEventListener() {}, requestAnimationFrame() {},
-    window: { addEventListener() {} },
+    HTMLElement: class {}, confirm: () => true, addEventListener(type,fn) { (globalListeners[type] ||= []).push(fn); }, requestAnimationFrame() {},
+    window: { addEventListener(type,fn) { (globalListeners[type] ||= []).push(fn); } },
     document: {
       activeElement: null, body: { classList: { toggle() {} } }, documentElement: { style: { setProperty() {} } },
       getElementById(id) {
@@ -45,12 +46,13 @@ function loadGame() {
   };
   createContext(context);
   const instrumented = source.replace(/\}\)\(\);\s*$/, `globalThis.__gameTest = {
-    init, start, tick, direction, pause, loop, reachable, makeObstacles, placeFood, openStats, closeStats, syncWelcome,
-    get game() { return game; }, get status() { return status; }
+    init, start, tick, direction, pause, loop, reachable, makeObstacles, placeFood, openStats, closeStats, openManual, closeManual, syncWelcome,
+    get game() { return game; }, get status() { return status; }, get manualIndex() { return manualIndex; }, get activeElement() { return document.activeElement; }
   };})();`);
   new Script(instrumented).runInContext(context);
   context.__gameTest.hiddenControls=hiddenControls;
   context.__gameTest.getElement=element;
+  context.__gameTest.dispatchKey=(event)=>{for(const fn of globalListeners.keydown||[])fn(event)};
   return context.__gameTest;
 }
 
@@ -197,6 +199,72 @@ test('el diálogo de ranking se muestra encima de la portada', () => {
   const html = read('index.html');
   assert.ok(html.includes('.modal{z-index:30}'));
   assert.ok(html.includes('.landing{position:fixed;inset:0;z-index:20;'));
+});
+
+test('el manual se abre desde la bienvenida, navega y devuelve el foco', () => {
+  const game = loadGame();
+  let focused = 0;
+  const button = {focus() { focused++; }, inert: false};
+
+  game.openManual(button);
+  assert.equal(game.getElement('manualModal').classList.contains('hidden'), false);
+  assert.equal(game.getElement('manualStep').textContent, 'Paso 1 de 4');
+  game.getElement('nextManual').onclick();
+  assert.equal(game.manualIndex, 1);
+  assert.equal(game.getElement('manualStep').textContent, 'Paso 2 de 4');
+  game.getElement('previousManual').onclick();
+  assert.equal(game.manualIndex, 0);
+  game.closeManual();
+  assert.equal(game.getElement('manualModal').classList.contains('hidden'), true);
+  assert.equal(focused, 1);
+});
+
+test('el manual atrapa Tab y Shift+Tab, bloquea el fondo y cierra con Escape', () => {
+  const game = loadGame();
+  let focused = 0;
+  const trigger = {focus() { focused++; }, inert: false};
+  game.openManual(trigger);
+  const close = game.getElement('closeManual');
+  const next = game.getElement('nextManual');
+  const forward = {key: 'Tab', shiftKey: false, prevented: false, preventDefault() { this.prevented = true; }};
+  game.dispatchKey(forward);
+  assert.equal(forward.prevented, true);
+  assert.equal(game.getElement('startOverlay').inert, true);
+  assert.equal(game.getElement('manualModal').classList.contains('hidden'), false);
+  assert.equal(game.activeElement, next);
+  const backward = {key: 'Tab', shiftKey: true, prevented: false, preventDefault() { this.prevented = true; }};
+  game.dispatchKey(backward);
+  assert.equal(backward.prevented, true);
+  assert.equal(game.activeElement, close);
+  const escape = {key: 'Escape', preventDefault() {}};
+  game.dispatchKey(escape);
+  assert.equal(game.getElement('manualModal').classList.contains('hidden'), true);
+  assert.equal(game.getElement('startOverlay').inert, false);
+  assert.equal(focused, 1);
+});
+
+test('abrir y cerrar el manual no modifica la partida ni sus preferencias', () => {
+  const game = loadGame();
+  game.start();
+  const state = game.game;
+  game.getElement('touchMode').value = 'buttons';
+
+  game.openManual();
+  game.closeManual();
+
+  assert.equal(game.status, 'playing');
+  assert.equal(game.game, state);
+  assert.equal(game.getElement('touchMode').value, 'buttons');
+});
+
+test('el manual documenta mecánicas actuales y tiene controles accesibles', () => {
+  const html = read('index.html');
+  for (const id of ['howToPlayBtn', 'manualModal', 'manualTitle', 'manualContent', 'previousManual', 'nextManual', 'closeManual']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  assert.ok(html.includes('protección de bienvenida durante 2 segundos'));
+  assert.ok(html.includes('Flechas en pantalla'));
+  assert.ok(html.includes('Desafío diario'));
 });
 
 
