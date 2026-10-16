@@ -251,3 +251,23 @@ test('la portada incluye el selector táctil en los controles inertes', () => {
   const html=read('index.html');
   assert.ok(html.includes('.pad, .hint, .touch-setting'));
 });
+
+
+test('el cambio al nivel 2 espera confirmación sin avanzar contra la pared', () => {
+  const sim=loadGame();sim.start();
+  const g=sim.game;
+  g.snake=[{x:18,y:12},{x:17,y:12},{x:16,y:12}];
+  g.dir={x:1,y:0};g.queue=[];g.eaten=7;g.food={x:19,y:12};
+  sim.tick();
+  assert.equal(g.level,2);
+  assert.equal(sim.status,'paused');
+  assert.equal(g.snake[0].x,19);
+  assert.notEqual(g.dir.x,1,'la dirección hacia la pared debe cambiar');
+  sim.tick();
+  assert.equal(g.snake[0].x,19,'no debe avanzar antes de continuar');
+  sim.pause();
+  assert.equal(sim.status,'playing');
+  sim.tick();
+  assert.equal(sim.status,'playing');
+  assert.equal(g.snake[0].x,19);
+});
