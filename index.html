@@ -38,7 +38,7 @@ body.welcome-screen .board canvas{filter:blur(8px) saturate(.82);opacity:.22}
 a:focus-visible{outline:3px solid #ffd85d;outline-offset:2px}
 @media(max-height:710px){.welcome-card{padding:22px 18px 18px}.welcome-card h2{font-size:clamp(32px,7vw,48px)}}
 @media(max-width:500px){.landing{padding:14px}.welcome-card{padding:22px 16px 18px;border-radius:20px}.welcome-card h2{font-size:clamp(30px,11vw,44px)}.welcome-actions{flex-direction:column}.welcome-actions .primary,.welcome-actions .smallbtn{width:100%}.welcome-card .formrow{grid-template-columns:1fr}.brand-block{margin-top:14px;padding-top:14px}}
-</style>
+.touch-setting{display:flex;align-items:center;justify-content:center;gap:9px;margin:10px auto;color:var(--muted);font-size:13px}.touch-setting select{max-width:200px}@media(hover:hover) and (pointer:fine){.touch-setting{display:none}}</style>
 </head>
 <body>
 <header><div><h1>🐍 VIBORITA NEÓN</h1><small>ARCADE EDITION</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="smallbtn" id="installBtn" hidden>⬇ Instalar</button><button class="smallbtn" id="statsBtn">🏆 Ranking</button></div></header>
@@ -50,7 +50,7 @@ a:focus-visible{outline:3px solid #ffd85d;outline-offset:2px}
 <section id="endOverlay" class="overlay hidden"><h2 id="endTitle">FIN DEL JUEGO</h2><p id="endInfo"></p><div class="chips" id="endAwards"></div><button class="primary" id="againBtn">VOLVER A JUGAR</button><button class="smallbtn" id="menuBtn">MENÚ PRINCIPAL</button></section>
 </div>
 <div id="powers" class="powerline" aria-live="polite"></div><div class="controls"><button id="pauseBtn">⏸ Pausa (P)</button><button id="muteBtn">🔊 Sonido (M)</button><button id="restartBtn">↻ Reiniciar</button></div>
-<div class="pad"><button class="up" data-dir="U" aria-label="Arriba">▲</button><button class="left" data-dir="L" aria-label="Izquierda">◀</button><button class="down" data-dir="D" aria-label="Abajo">▼</button><button class="right" data-dir="R" aria-label="Derecha">▶</button></div>
+<label class="touch-setting">Control móvil <select id="touchMode" aria-label="Modo de control táctil"><option value="gestures">Deslizar el dedo</option><option value="buttons">Flechas en pantalla</option></select></label>\n<div class="pad"><button class="up" data-dir="U" aria-label="Arriba">▲</button><button class="left" data-dir="L" aria-label="Izquierda">◀</button><button class="down" data-dir="D" aria-label="Abajo">▼</button><button class="right" data-dir="R" aria-label="Derecha">▶</button></div>
 <div class="hint">Los récords y logros se guardan solo en este navegador, sin enviar datos.</div>
 <div class="modal hidden" id="statsModal" role="dialog" aria-modal="true" aria-labelledby="statsTitle"><div class="panel"><h2 id="statsTitle">🏆 Salón de la fama</h2><p>Mejores diez partidas guardadas en este dispositivo.</p><div id="ranking"></div><h3>Logros</h3><div id="achievements"></div><div class="row"><button class="smallbtn" id="clearBtn">Borrar datos</button><button class="primary" id="closeStats">Cerrar</button></div></div></div>
 <script>
@@ -78,9 +78,9 @@ for(let i=0;i<count&&allowed.length;i++){const j=Math.floor(rand()*allowed.lengt
 function sound(freq,duration=.09,type='sine',vol=.09){if(muted)return;try{if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const now=audioCtx.currentTime,o=audioCtx.createOscillator(),v=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,now);v.gain.setValueAtTime(vol,now);v.gain.exponentialRampToValueAtTime(.001,now+duration);o.connect(v);v.connect(audioCtx.destination);o.start(now);o.stop(now+duration+.02)}catch{}}
 function unlock(id){if(db.ach[id])return;db.ach[id]=true;save();if(game)game.unlocked.push(id)}
 function init(){const mode=el('mode').value,difficulty=el('difficulty').value,day=dailySeed();game={mode,difficulty,seeded:mode==='daily',seed:day.seed,day:day.label,name:el('player').value.trim().slice(0,16)||'Jugador',snake:[{x:10,y:12},{x:9,y:12},{x:8,y:12}],dir:D.R,queue:[],score:0,level:1,eaten:0,grow:0,food:null,item:null,obstacles:[],effects:{shield:0,slow:0,double:0},particles:[],freeze:0,unlocked:[],banner:'',bannerUntil:0,stars:0};makeObstacles();placeFood();updateHud()}
-function start(){init();status='playing';acc=0;last=performance.now();hideOverlays();syncWelcome();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();canvas.focus({preventScroll:true});sound(650)}
+function start(){cancelTouch();init();status='playing';acc=0;last=performance.now();hideOverlays();syncWelcome();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();canvas.focus({preventScroll:true});sound(650)}
 function hideOverlays(){for(const id of ['startOverlay','pauseOverlay','endOverlay'])el(id).classList.add('hidden')}
-function menu(){status='menu';game=null;hideOverlays();el('startOverlay').classList.remove('hidden');el('powers').textContent='';el('progress').style.width='0%';updateBest();syncWelcome()}
+function menu(){cancelTouch();status='menu';game=null;hideOverlays();el('startOverlay').classList.remove('hidden');el('powers').textContent='';el('progress').style.width='0%';updateBest();syncWelcome()}
 function difficultySpeed(){return {easy:1.28,normal:1,hard:.76}[game.difficulty]}
 function stepLength(){let ms=cfg().base;const prev=game.level===1?0:LEVELS[game.level-2].goal;const within=game.mode==='campaign'?game.eaten-prev:game.eaten%10;ms=Math.max(58,ms-within*3);if(game.mode!=='campaign')ms=Math.max(57,ms-Math.min(30,Math.floor(game.eaten/10)*4));return ms*difficultySpeed()*(game.effects.slow>0?1.6:1)}
 function updateBest(){const vals=db.ranking.map(r=>Number(r.score)||0);el('best').textContent=Math.max(0,...vals)}
@@ -98,7 +98,7 @@ if(!eats){if(g.grow)g.grow--;else g.snake.pop()}
 if(eats){if(g.mode==='campaign'&&g.eaten===cfg().goal){advanceLevel();if(status!=='playing')return}else if(g.mode!=='campaign'&&g.eaten%10===0)advanceLevel();if(status!=='playing')return;placeFood()}
 updateHud()}
 function finish(won){if(status!=='playing')return;status='over';syncWelcome();if(won&&game.mode==='campaign')unlock('win');sound(won?900:180,.3,won?'triangle':'sawtooth');const oldBest=Math.max(0,...db.ranking.filter(r=>r.mode===game.mode&&r.difficulty===game.difficulty).map(r=>r.score));const record=game.score>oldBest;db.ranking.push({name:game.name,score:game.score,level:game.level,mode:game.mode,difficulty:game.difficulty,date:new Date().toISOString().slice(0,10),day:game.mode==='daily'?game.day:null});db.ranking.sort((a,b)=>b.score-a.score);db.ranking=db.ranking.slice(0,10);save();el('endTitle').textContent=won?(game.mode==='campaign'?'🏆 ¡CAMPAÑA COMPLETA!':'🏆 ¡TABLERO COMPLETO!'):'💥 GAME OVER';el('endInfo').textContent=`${game.name} · ${game.score} puntos · Nivel ${game.level} · ${game.eaten} frutas${record?' · ¡Nuevo récord de modo!':''}`;el('endAwards').textContent=game.unlocked.map(id=>ACH.find(a=>a[0]===id)?.[1]||id).join(' · ');el('endOverlay').classList.remove('hidden');updateHud()}
-function pause(){if(status==='playing'){status='paused';el('pauseOverlay').classList.remove('hidden')}else if(status==='paused'){status='playing';last=performance.now();el('pauseOverlay').classList.add('hidden')}}
+function pause(){if(status==='playing'){cancelTouch();status='paused';el('pauseOverlay').classList.remove('hidden')}else if(status==='paused'){status='playing';last=performance.now();el('pauseOverlay').classList.add('hidden')}}
 function direction(k){if(status!=='playing'||!D[k])return;const d=D[k],reference=game.queue.length?game.queue[game.queue.length-1]:game.dir;if(d.x===-reference.x&&d.y===-reference.y||d.x===reference.x&&d.y===reference.y)return;if(game.queue.length<2)game.queue.push(d)}
 function draw(now){ctx.clearRect(0,0,560,560);const hue=game?cfg().hue:165,g=ctx.createLinearGradient(0,0,0,560);g.addColorStop(0,'#100c31');g.addColorStop(1,'#050416');ctx.fillStyle=g;ctx.fillRect(0,0,560,560);ctx.strokeStyle=`hsla(${hue},100%,60%,.1)`;ctx.lineWidth=1;for(let i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*T,0);ctx.lineTo(i*T,560);ctx.moveTo(0,i*T);ctx.lineTo(560,i*T);ctx.stroke()}if(!game)return;
 for(const p of game.obstacles){ctx.shadowColor='#a88bff';ctx.shadowBlur=12;ctx.fillStyle='#5332a2';rounded(p.x*T+2,p.y*T+2,T-4,T-4,6);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#af89ff';ctx.lineWidth=2;ctx.stroke()}
@@ -117,7 +117,33 @@ function closeStats(){el('statsModal').classList.add('hidden');if(modalWasPlayin
 el('startBtn').onclick=start;el('againBtn').onclick=start;el('resumeBtn').onclick=pause;el('exitBtn').onclick=menu;el('menuBtn').onclick=menu;el('pauseBtn').onclick=pause;el('restartBtn').onclick=()=>{if(status==='playing'||status==='paused'||status==='over')start()};el('muteBtn').onclick=()=>{muted=!muted;el('muteBtn').textContent=muted?'🔇 Silencio (M)':'🔊 Sonido (M)'};
 el('statsBtn').onclick=()=>openStats(el('statsBtn'));el('startStatsBtn').onclick=()=>openStats(el('startStatsBtn'));el('closeStats').onclick=closeStats;el('clearBtn').onclick=()=>{if(confirm('¿Eliminar ranking y logros de este dispositivo?')){db={ranking:[],ach:{},stars:0};save();renderStats();updateBest()}};
 const keys={ArrowUp:'U',ArrowDown:'D',ArrowLeft:'L',ArrowRight:'R',w:'U',a:'L',s:'D',d:'R'};addEventListener('keydown',e=>{if(!el('statsModal').classList.contains('hidden')){if(e.key==='Escape')closeStats();return}if(status!=='playing'&&['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;const k=keys[e.key]||keys[e.key.toLowerCase()];if(k){e.preventDefault();direction(k)}else if(e.code==='Space'||e.key.toLowerCase()==='p'){e.preventDefault();if(status==='menu'||status==='over')start();else pause()}else if(e.key.toLowerCase()==='m')el('muteBtn').click();else if(e.key==='Enter'&&(status==='menu'||status==='over'))start()});
-document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();direction(b.dataset.dir)}));let touch=null;canvas.addEventListener('pointerdown',e=>{touch={x:e.clientX,y:e.clientY}});canvas.addEventListener('pointerup',e=>{if(!touch)return;const dx=e.clientX-touch.x,dy=e.clientY-touch.y;touch=null;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;direction(Math.abs(dx)>Math.abs(dy)?(dx>0?'R':'L'):(dy>0?'D':'U'))});
+document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();direction(b.dataset.dir)}));let touch=null;
+const touchMode=el('touchMode');
+touchMode.value=localStorage.getItem('viborita-touch-mode')==='buttons'?'buttons':'gestures';
+touchMode.addEventListener('change',()=>{localStorage.setItem('viborita-touch-mode',touchMode.value);cancelTouch()});
+function cancelTouch(){if(touch&&canvas.hasPointerCapture?.(touch.id))canvas.releasePointerCapture(touch.id);touch=null}
+function touchMove(e){
+  if(!touch||e.pointerId!==touch.id||status!=='playing'||touchMode.value!=='gestures')return;
+  const dx=e.clientX-touch.x,dy=e.clientY-touch.y;
+  const threshold=Math.max(16,Math.min(30,canvas.getBoundingClientRect().width*.045));
+  if(Math.max(Math.abs(dx),Math.abs(dy))<threshold)return;
+  const horizontal=Math.abs(dx)>=Math.abs(dy);
+  const key=horizontal?(dx>0?'R':'L'):(dy>0?'D':'U');
+  const previous=game.queue.length?game.queue[game.queue.length-1]:game.dir;
+  direction(key);
+  const after=game.queue.length?game.queue[game.queue.length-1]:game.dir;
+  // Solo consumir el gesto al aceptar un giro; un giro ilegal no bloquea el siguiente.
+  if(after!==previous){touch.x=e.clientX;touch.y=e.clientY}
+}
+canvas.addEventListener('pointerdown',e=>{
+  if(status!=='playing'||touchMode.value!=='gestures'||touch||e.pointerType==='mouse'&&e.button!==0)return;
+  touch={id:e.pointerId,x:e.clientX,y:e.clientY};
+  canvas.setPointerCapture?.(e.pointerId);
+});
+canvas.addEventListener('pointermove',touchMove);
+canvas.addEventListener('pointerup',e=>{if(touch&&e.pointerId===touch.id){touchMove(e);cancelTouch()}});
+canvas.addEventListener('pointercancel',e=>{if(touch&&e.pointerId===touch.id)cancelTouch()});
+canvas.addEventListener('lostpointercapture',e=>{if(touch&&e.pointerId===touch.id)touch=null});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&status==='playing')pause()});updateBest();syncWelcome();requestAnimationFrame(t=>{last=t;loop(t)});
 })();
 </script>
